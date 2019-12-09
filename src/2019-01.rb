@@ -6,18 +6,26 @@
 # 2. divide by three,
 # 3. round down, and 
 # 4. subtract 2.
-def day01(io=$stdin)
-	i = 0
-	while line = io.gets
-		step1 = line.chomp.to_i or abort "Time to surf"
-		step2 = step1 / 3.0
-		step3 = step2.floor
-		step4 = step3 - 2
-		i += step4
+def fuel_for_mass(mass)
+	(mass / 3.0).floor - 2
+end
+
+def fuel_for_filename(filename)
+	total_mass = 0
+	total_fuel = 0
+	File.open(filename).each do |line|
+		mass = line.chomp.to_i
+		total_mass += mass
+		total_fuel += fuel_for_mass(mass)
 	end
-	puts i
+	[ total_mass, total_fuel ]
+end
+
+def day01
+	mass, fuel = fuel_for_filename('./data/2019-01')
+	puts "mass=%d, fuel: %d" % [ mass, fuel ]
 end
 
 if __FILE__ == $0
-	day01(File.open('./data/2019-01'))
+	day01()
 end
