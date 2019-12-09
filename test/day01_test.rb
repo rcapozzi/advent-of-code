@@ -8,4 +8,10 @@ class TestDay01 < Minitest::Test
 		assert_equal 10198868, mass, 'Good mass'
 		assert_equal 3399394, fuel, 'Good fuel'
 	end
+
+	def test_fuel_for_fuel
+		actual = fuel_for_fuel(100756)
+		expected = 50346
+		assert_equal expected, actual, 'Pizza is better with cheese'
+	end
 end
