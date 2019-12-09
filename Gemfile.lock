@@ -13,6 +13,10 @@ GEM
       pry (>= 0.9.12)
       shellany (~> 0.0)
       thor (>= 0.18.1)
+    guard-compat (1.2.1)
+    guard-minitest (2.4.6)
+      guard-compat (~> 1.2)
+      minitest (>= 3.0)
     listen (3.2.1)
       rb-fsevent (~> 0.10, >= 0.10.3)
       rb-inotify (~> 0.9, >= 0.9.10)
@@ -37,6 +41,7 @@ PLATFORMS
 
 DEPENDENCIES
   guard (~> 2.16)
+  guard-minitest (~> 2.4)
   minitest (~> 5.13)
 
 BUNDLED WITH
