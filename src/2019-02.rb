@@ -30,7 +30,7 @@ def intCode(ary)
 		intCode_i(i, ary) or break
 		i += 1
 	end
-	ary[0]
+	ary
 end
 
 def intSearch(value, str)
@@ -41,7 +41,7 @@ def intSearch(value, str)
 			ary = str.split(',').map{|item| item.to_i}
 			ary[1] = i
 			ary[2] = j
-			v = intCode(ary)
+			v = intCode(ary)[0]
 			if v == value
 				return [ i, j ]
 			end

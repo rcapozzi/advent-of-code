@@ -13,7 +13,9 @@ class T2019_02 < Minitest::Test
 		]
 		
 		data.each_with_index do |item, idx|
-			assert_equal item[1], intCode(item[0]), "Gravey #{idx}"
+			initial = item[0].split(',').map{|e| e.to_i}
+			expected = item[1].split(',').map{|e| e.to_i}
+			assert_equal expected, intCode(initial), "Gravey #{idx}"
 		end
 	end
 end
