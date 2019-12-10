@@ -10,21 +10,16 @@ def intCode_i(step, ary)
 	pos_v2 = ary[i += 1]
 	pos_vx = ary[i += 1]
 
-	v1 = ary[pos_v1] or abort "out of range v1 #{i} #{pos_v1}"
-	v2 = ary[pos_v2] or abort "out of range v2"
+	v1 = ary[pos_v1] #or abort "out of range v1 #{i} #{pos_v1}"
+	v2 = ary[pos_v2] #or abort "out of range v2"
 
 	value = op == 1 ? v1 + v2 : v1 * v2
 	ary[pos_vx] = value
 	true
 end
 
-def to_ary_of_int(str)
-	str.split(',').map{|item| item.to_i}
-end
-
 # ary: Ary of Ints
 def intCode(ary)
-#	ary = ary.is_a?(String) ? (ary.split(',').map{|item| item.to_i}) : ary
 	i = 0
 	loop do
 		intCode_i(i, ary) or break
