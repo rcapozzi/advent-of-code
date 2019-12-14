@@ -61,15 +61,17 @@ def try1()
 	seen = Hash.new
 	v1 = v2 = skips = 0
 	i_start.upto(i_end) do |i|
-		key = i.digits.sort
-		if seen[key]
+		key = i.digits.sort.join
+		i_key = key.to_i
+		if i_key < i_start || i_key > i_end || seen[key]
 			skips += 1
 			next
 		end
-		if valid_password?(i.to_s) > 0
+		password = i.to_s
+		if valid_password?(password) > 0
 			v1 += 1
 		end
-		if valid_password2?(i.to_s) > 0
+		if valid_password2?(password) > 0
 			v2 += 1
 		end
 		seen[key] = [v1, v2]
