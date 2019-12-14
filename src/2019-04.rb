@@ -58,16 +58,24 @@ def try1()
 		i_start, i_end = $1.to_i, $2.to_i
 	end
 	puts "Finding valid passwords for #{i_start} to #{i_end}"
-	v1 = v2 = 0
+	seen = Hash.new
+	v1 = v2 = skips = 0
 	i_start.upto(i_end) do |i|
+		key = i.digits.sort
+		if seen[key]
+			skips += 1
+			next
+		end
 		if valid_password?(i.to_s) > 0
 			v1 += 1
 		end
 		if valid_password2?(i.to_s) > 0
 			v2 += 1
 		end
+		seen[key] = [v1, v2]
 	end
 	puts "valid passwords for #{i_start} to #{i_end}: v1: #{v1}, v2: #{v2}"
+	puts "Seen values #{seen.keys.size} skips: #{skips}"
 end
 
 if __FILE__ == $0
