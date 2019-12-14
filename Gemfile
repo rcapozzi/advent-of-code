@@ -11,3 +11,4 @@ gem "minitest", "~> 5.13"
 gem "guard", "~> 2.16"
 
 gem "guard-minitest", "~> 2.4"
+gem 'byebug'
