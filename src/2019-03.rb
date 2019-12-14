@@ -1,24 +1,21 @@
 require 'byebug'
 
 class Node
-	attr_reader :toucher, :touch_count, :x, :y
+	attr_reader :toucher, :touch_count, :x, :y, :distance
 
 	def initialize(x, y)
 		@toucher = nil
 		@touch_count = 0
 		@x = x
 		@y = y
+		@distance = @x.abs + @y.abs
 	end
 
 	def touch(toucher)
 		@touch_count += 1 if toucher != @toucher
-		puts 'Crossing self %d %d' %[x,y] if toucher == @toucher
 		@toucher = toucher
 	end
 
-	def distance(from_x=1, from_y=1)
-		@distance ||= @x + @y - from_x - from_y
-	end
 end
 
 class Grid
@@ -26,12 +23,10 @@ class Grid
 		@grid
 	end
 
-	def initialize(x_size=nil, y_size=nil)
-		@x_size, @y_size = x_size, y_size
+	def initialize()
 		@grid = Hash.new{|hash, key| hash[key] = Node.new(*key) }
 	end
 
-	# Add a path starting at location x, y
 	def path(x, y, path)
 		location = [x, y]
 		if path.is_a?String
@@ -39,7 +34,7 @@ class Grid
 		end
 		@grid[location].touch(path)
 		path.each_step do |direction, distance|
-			puts "%04d x %04d => %s %s" % [x, y, direction, distance]
+			$DEBUG and puts "%04d x %04d => %s %s" % [x, y, direction, distance]
 			distance.times do
 				if direction == 'D'
 					y -= 1
@@ -55,7 +50,7 @@ class Grid
 				@grid[[x, y]].touch(path)
 			end
 		end
-		puts 'x: %s, y: %s' % [x, y]
+		$DEBUG and puts 'x: %s, y: %s' % [x, y]
 		[x, y]
 	end
 
@@ -69,9 +64,6 @@ class Grid
 
 	def closest_cross
 		crosses.inject(){|m, node| node.distance < m.distance ? node : m }
-		#crosses.each{|node|
-			#puts "x:%04.2d, y:%06.02d distance: %06.2d" % [node.x, node.y, node.x + node.y ]
-		#	};nil
 	end
 end
 
@@ -89,12 +81,9 @@ class Path
 			yield step
 		end
 	end
-	# def steps
-	# 	@steps
-	# end
+
 	def initialize(string)
 		@steps = []
-		#@orig_path = string
 		string.split(',').each do |step|
 			if step =~ /([RLUD])(\d+)/
 				direction, distance = $1, $2.to_i
@@ -132,10 +121,10 @@ if __FILE__ == $0
 	DATA.each_line do |line|
 		path = Path.new(line.chomp)
 		paths << path
-		grid.path(1,1,path)
+		puts 'Add path to grid...'
+		grid.path(0,0,path)
 	end
-
-	puts "Closest cross distance %d" % grid.closest_cross.distance
+	puts "Closest cross distance %4d" % [ grid.closest_cross.distance ]
 end
 
 __END__
