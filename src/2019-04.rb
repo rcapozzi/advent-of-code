@@ -5,7 +5,7 @@ extend Test::Unit::Assertions
 
 # Need to see a char twice
 def has_double?(str)
-	seen = str.split('').inject(Hash.new(0)) { |m, d| m[d] += 1; m}
+	seen = str.chars.inject(Hash.new(0)) { |m, d| m[d] += 1; m}
 	seen.has_value?(2)
 end
 
@@ -37,7 +37,7 @@ end
 
 def try0()
 	input = '130254-678275'
-	ordered_input = input.split('').sort.join
+	ordered_input = input.chars.sort.join
 
 	n = 0
 	ordered_input.size.times do |i|
