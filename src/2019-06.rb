@@ -8,9 +8,9 @@ class Planet
 	end
 end
 
-def visit_parent(name, ss, level=0)
-	return if name.nil?
-	node = ss[name]
+def visit_parent(node, ss, level=0)
+	#return if name.nil?
+	#node = ss[name]
 	#puts '..%s %s' % ['..' * level, node.name ]
 	return level unless parent = node.parent
 	find_parent(parent.name, ss, level+1)

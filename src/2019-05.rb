@@ -20,6 +20,7 @@ end
 
 class IntComputer
 	attr_reader :ram, :input
+	attr_accessor :input
 	OP_ADD = 1
 	OP_MULT = 2
 	OP_INPUT = 3
