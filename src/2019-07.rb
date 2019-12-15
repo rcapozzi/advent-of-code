@@ -25,6 +25,9 @@ class IntComputer
 	attr_reader :ram, :output_result
 	attr_accessor :input
 
+	def is_halted?
+		@halted
+	end
 	def ram=(program)
 		if program.is_a?(String)
 			@ram = program.split(',').map{|e| e.to_i}
@@ -33,8 +36,10 @@ class IntComputer
 		end
 	end
 
-	def initialize(program=nil)
+	def initialize(program=nil, init=nil)
 		self.ram = program if program
+		@op_ptr = 0
+		@input = [init].compact
 		@halted = false
 	end
 
@@ -42,12 +47,13 @@ class IntComputer
 	# and saves it to the position given by its only parameter.
 	def op_input(instruction)
 		ptr = instruction.ptr
-		return @output_result if  @input.size == 0
+		if  @input.size == 0
+			#puts 'No more input. returning.'
+			return 0
+		end
 		value = @input.shift or raise 'No more input'
-		value = value.to_i
-		pos_v1 = ram[ptr + 1]
-		puts "Inputing value #{value} to #{pos_v1}"
-		ram[pos_v1] = value
+		ram[ram[ptr + 1]] = value.to_i
+		2
 	end
 
 	def op_output(instruction)
@@ -56,6 +62,7 @@ class IntComputer
 		value = instruction.p1 == 0 ? ram[pos_v1] : pos_v1
 		#puts "output @#{ptr + 1} #{value}"
 		@output_result = value
+		2
 	end
 
 	def get_ram(ptr, mode, param_id)
@@ -92,32 +99,36 @@ class IntComputer
 	end
 
 	def execute(program=nil, input=nil)
-		self.ram = program if program
-		@input = input if input
+		if program
+			self.ram = program
+			@op_ptr = 0
+		end
+		@input << input if input
 		@output_result = nil
-		op_ptr = 0
+
 		loop do
 			next_op_ptr = 4
-			opcode = ram[op_ptr]
-			instruction = Instruction.new(opcode, op_ptr)
+			opcode = ram[@op_ptr]
+			instruction = Instruction.new(opcode, @op_ptr)
 			@v1 = get_ram(instruction.ptr, instruction.p1, 1)
 			@v2 = get_ram(instruction.ptr, instruction.p2, 2)
 
 			if instruction.opcode == 1
-				ram[ram[op_ptr + 3]] = @v1 + @v2
+				ram[ram[@op_ptr + 3]] = @v1 + @v2
 			elsif instruction.opcode == 2
-				ram[ram[op_ptr + 3]] = @v1 * @v2
+				ram[ram[@op_ptr + 3]] = @v1 * @v2
 			elsif instruction.opcode == 3
-				next_op_ptr = 2
-				op_input(instruction)
+				next_op_ptr = op_input(instruction)
+				return @output_result if next_op_ptr == 0
 			elsif instruction.opcode == 4
-				next_op_ptr = 2
-				op_output(instruction)
+				next_op_ptr = op_output(instruction)
+				#return @output_result.to_i
+				#				break
 			elsif instruction.opcode == 5 or
 			      instruction.opcode == 6
 				next_op_ptr = 3
 				if jump = op_jump(instruction,instruction.opcode == 5)
-					op_ptr = jump
+					@op_ptr = jump
 					next_op_ptr = 0
 				end
 			elsif instruction.opcode == 7
@@ -131,7 +142,7 @@ class IntComputer
 			else
 				raise "Bad opcode #{opcode}"
 			end
-			op_ptr += next_op_ptr
+			@op_ptr += next_op_ptr
 		end
 		@output_result.to_i
 	end
@@ -148,31 +159,28 @@ def maxamp(program, data)
 	result
 end
 
-class FeebackAmp
-	attr_accessor :amps
-	def initialize(data, program)
-		@program = program
-		amps = []
-		data.size.times do |i|
-			amp = IntComputer.new(program)
-			amp.input = [ data[i] ]
-			amps << amp
-		end
-		@amps = amps
-	end
-
-	def execute
-		@amps.each do |amp|
-			output = amp.execute
+def part2_i(vector, program)
+	amps = vector.map{ |init| IntComputer.new(program, init)}
+	total = 0
+	while amps.none?(&:is_halted?)
+		total = amps.inject(total) do |m, amp|
+			m = amp.execute(nil, m)
 		end
 	end
+	total
 end
 
-program = '3,26,1001,26,-4,26,3,27,1002,27,2,27,1,27,26,27,4,27,1001,28,-1,28,1005,28,6,99,0,0,5'
-# program = '3,26,1001,26,-4,26,3,27,1002,27,2,27,1,27,26,27,4,27,1001,28,-1,28,1005,28,6,99,0,0,5'
-# amps = FeebackAmp.init([9,8,7,6,5],program)
-def part1
-	# 1st part
+def test_part2
+	vector = [9,8,7,6,5]
+	program = '3,26,1001,26,-4,26,3,27,1002,27,2,27,1,27,26,27,4,27,1001,28,-1,28,1005,28,6,99,0,0,5'
+	assert_equal 139629729, part2_i(vector,program)
+
+	vector = [9,7,8,5,6]
+	program = '3,52,1001,52,-5,52,3,53,1,52,56,54,1007,54,5,55,1005,55,26,1001,54,-5,54,1105,1,12,1,53,54,53,1008,54,0,55,1001,55,1,55,2,53,55,53,4,53,1001,56,-1,56,1005,56,6,99,0,0,0,0,10'
+	assert_equal 18216, part2_i(vector,program)
+end
+
+def day07_part1
 	filename = ARGV[0] || 'data/2019-07.input.txt'
 	program = File.read(filename).chomp
 	max = 0
@@ -180,8 +188,20 @@ def part1
 		result = maxamp(program, data)
 		max = result > max ? result : max
 	end
-	puts 'Part 1: Highest output: %s' % max
+	puts 'Day 07 Part 1: Highest output: %s' % max
 	assert_equal 368584, max, 'Now I know the answer'
+end
+
+def day07_part2
+	filename = ARGV[0] || 'data/2019-07.input.txt'
+	program = File.read(filename).chomp
+	mymax = 0
+	(5..9).to_a.permutation do |vector|
+		x = part2_i(vector,program)
+		mymax = x > mymax ? x : mymax
+	end
+	puts 'Day 07 Part 2: Answer: %s' % mymax
+	assert_equal 35993240, mymax, 'Puzzle answer for Day 07 Part 02'
 end
 
 if __FILE__ == $0
@@ -197,5 +217,19 @@ if __FILE__ == $0
 	data = [1,0,4,3,2]
 	assert_equal 65210, maxamp('3,31,3,32,1002,32,10,32,1001,31,-2,31,1007,31,0,33,1002,33,7,33,1,33,31,31,1,32,31,31,4,31,99,0,0,0', data)
 
-	part1
+	day07_part1
+	vector = [9,8,7,6,5]
+	program = '3,26,1001,26,-4,26,3,27,1002,27,2,27,1,27,26,27,4,27,1001,28,-1,28,1005,28,6,99,0,0,5'
+	ic = IntComputer.new(program, 9)
+	assert_equal 5, ic.execute(nil,0)
+	assert_equal [99, 5, 5, 4], ic.ram[-4,4]
+	assert_equal false, ic.is_halted?
+
+	ic2 = IntComputer.new(program, 8)
+	assert_equal 14, ic2.execute(nil,5)
+	assert_equal [3, 26, 1001, 26, -4, 26, 3, 27, 1002, 27, 2, 27, 1, 27, 26, 27, 4, 27, 1001, 28, -1, 28, 1005, 28, 6, 99, 4, 14, 4], ic2.ram
+
+	test_part2
+	day07_part2
 end
+
