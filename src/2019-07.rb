@@ -166,15 +166,12 @@ def maxamp(program, data)
 		ic.input = [amp, result]
 		result = ic.execute(program)
 	end
-	puts "output: %s" % result
+	# puts "output: %s" % result
 	result
 end
 
 if __FILE__ == $0
 	extend Test::Unit::Assertions
-
-	filename = ARGV[0] || 'data/2019-05.input.txt'
-	program = File.read(filename).chomp
 
 	program = '3,15,3,16,1002,16,10,16,1,16,15,15,4,15,99,0,0'
 	data = [4,3,2,1,0]
@@ -185,4 +182,16 @@ if __FILE__ == $0
 
 	data = [1,0,4,3,2]
 	assert_equal 65210, maxamp('3,31,3,32,1002,32,10,32,1001,31,-2,31,1007,31,0,33,1002,33,7,33,1,33,31,31,1,32,31,31,4,31,99,0,0,0', data)
+
+	# 1st part
+	filename = ARGV[0] || 'data/2019-07.input.txt'
+	program = File.read(filename).chomp
+	max = 0
+	(0..4).to_a.permutation.to_a.each do |data|
+		result = maxamp(program, data)
+		if result > max
+			max = result
+			puts 'Higher max %s' % result
+		end
+	end
 end
