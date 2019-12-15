@@ -17,22 +17,13 @@ class Instruction
 		@p2 = p2 || 0
 		@p3 = p3 || 0
 		@ptr = ptr
-		# puts "%p" % self
+		#puts "%p" % self
 	end
 end
 
 class IntComputer
-	attr_reader :ram, :input, :output_result
+	attr_reader :ram, :output_result
 	attr_accessor :input
-	OP_ADD = 1
-	OP_MULT = 2
-	OP_INPUT = 3
-	OP_OUTPUT = 4
-	OP_JUMP_T = 5
-	OP_JUMP_F = 6
-	OP_LESS_T = 7
-	OP_EQUALS = 8
-	OP_HALT = 99
 
 	def ram=(program)
 		if program.is_a?(String)
@@ -43,29 +34,19 @@ class IntComputer
 	end
 
 	def initialize(program=nil)
-		ram = program
-	end
-
-	def op_add(instruction)
-		ptr = instruction.ptr
-		pos_v3 = ram[ptr + 3]
-		ram[pos_v3] = @v1 + @v2
-	end
-
-	def op_mult(instruction)
-		ptr = instruction.ptr
-		pos_v3 = ram[ptr + 3]
-		ram[pos_v3] = @v1 * @v2
+		self.ram = program if program
+		@halted = false
 	end
 
 	# Opcode 3 takes a single integer as input
 	# and saves it to the position given by its only parameter.
 	def op_input(instruction)
+		ptr = instruction.ptr
+		return @output_result if  @input.size == 0
 		value = @input.shift or raise 'No more input'
 		value = value.to_i
-		#puts "Inputing value #{value}"
-		ptr = instruction.ptr
 		pos_v1 = ram[ptr + 1]
+		puts "Inputing value #{value} to #{pos_v1}"
 		ram[pos_v1] = value
 	end
 
@@ -83,8 +64,10 @@ class IntComputer
 		end
 	end
 
+	# Opcode 5: jump-if-true:
+	# if p1 != 0, sets the instruction pointer to p2. else noop.
 	def op_jump(instruction,mode=true)
-		ptr = instruction.ptr
+		#ptr = instruction.ptr
 		return @v2 if mode == true and @v1 != 0
 		return @v2 if mode == false and @v1 == 0
 		nil
@@ -92,11 +75,8 @@ class IntComputer
 
 	def op_less_than(instruction)
 		ptr = instruction.ptr
-		v1 = get_ram(ptr, instruction.p1, 1)
-		v2 = get_ram(ptr, instruction.p2, 2)
-		v3 = get_ram(ptr, 1, 3)
-		value = v1 < v2 ? 1 : 0
-		ram[v3] = value
+		value = @v1 < @v2 ? 1 : 0
+		ram[get_ram(ptr, 1, 3)] = value
 	end
 
 	# Opcode 8 is equals: if the first parameter is equal to the
@@ -111,12 +91,10 @@ class IntComputer
 		ram[pos_v3] = value
 	end
 
-	def execute(program=nil)
-		if program
-			self.ram= program
-		end
-		#@input << 1 if @input.size == 0
-		result = nil
+	def execute(program=nil, input=nil)
+		self.ram = program if program
+		@input = input if input
+		@output_result = nil
 		op_ptr = 0
 		loop do
 			next_op_ptr = 4
@@ -125,40 +103,41 @@ class IntComputer
 			@v1 = get_ram(instruction.ptr, instruction.p1, 1)
 			@v2 = get_ram(instruction.ptr, instruction.p2, 2)
 
-			if instruction.opcode == OP_ADD
-				op_add(instruction)
-			elsif instruction.opcode == OP_MULT
-				op_mult(instruction)
-			elsif instruction.opcode == OP_INPUT
+			if instruction.opcode == 1
+				ram[ram[op_ptr + 3]] = @v1 + @v2
+			elsif instruction.opcode == 2
+				ram[ram[op_ptr + 3]] = @v1 * @v2
+			elsif instruction.opcode == 3
 				next_op_ptr = 2
 				op_input(instruction)
-			elsif instruction.opcode == OP_OUTPUT
+			elsif instruction.opcode == 4
 				next_op_ptr = 2
 				op_output(instruction)
-			elsif instruction.opcode == OP_JUMP_T or
-			      instruction.opcode == OP_JUMP_F
+			elsif instruction.opcode == 5 or
+			      instruction.opcode == 6
 				next_op_ptr = 3
-				if jump = op_jump(instruction,instruction.opcode == OP_JUMP_T)
+				if jump = op_jump(instruction,instruction.opcode == 5)
 					op_ptr = jump
 					next_op_ptr = 0
 				end
-			elsif instruction.opcode == OP_LESS_T
+			elsif instruction.opcode == 7
 				op_less_than(instruction)
-			elsif instruction.opcode == OP_EQUALS
+			elsif instruction.opcode == 8
 				op_equals(instruction)
-			elsif instruction.opcode == OP_HALT
+			elsif instruction.opcode == 99
 				result = ram[0]
+				@halted = true
 				break
 			else
 				raise "Bad opcode #{opcode}"
 			end
 			op_ptr += next_op_ptr
 		end
-		result
 		@output_result.to_i
 	end
 end
 
+# data: ary of 'init phase setting'. one for each amp.
 def maxamp(program, data)
 	ic = IntComputer.new
 	result = 0
@@ -166,8 +145,43 @@ def maxamp(program, data)
 		ic.input = [amp, result]
 		result = ic.execute(program)
 	end
-	# puts "output: %s" % result
 	result
+end
+
+class FeebackAmp
+	attr_accessor :amps
+	def initialize(data, program)
+		@program = program
+		amps = []
+		data.size.times do |i|
+			amp = IntComputer.new(program)
+			amp.input = [ data[i] ]
+			amps << amp
+		end
+		@amps = amps
+	end
+
+	def execute
+		@amps.each do |amp|
+			output = amp.execute
+		end
+	end
+end
+
+program = '3,26,1001,26,-4,26,3,27,1002,27,2,27,1,27,26,27,4,27,1001,28,-1,28,1005,28,6,99,0,0,5'
+# program = '3,26,1001,26,-4,26,3,27,1002,27,2,27,1,27,26,27,4,27,1001,28,-1,28,1005,28,6,99,0,0,5'
+# amps = FeebackAmp.init([9,8,7,6,5],program)
+def part1
+	# 1st part
+	filename = ARGV[0] || 'data/2019-07.input.txt'
+	program = File.read(filename).chomp
+	max = 0
+	(0..4).to_a.permutation do |data|
+		result = maxamp(program, data)
+		max = result > max ? result : max
+	end
+	puts 'Part 1: Highest output: %s' % max
+	assert_equal 368584, max, 'Now I know the answer'
 end
 
 if __FILE__ == $0
@@ -183,15 +197,5 @@ if __FILE__ == $0
 	data = [1,0,4,3,2]
 	assert_equal 65210, maxamp('3,31,3,32,1002,32,10,32,1001,31,-2,31,1007,31,0,33,1002,33,7,33,1,33,31,31,1,32,31,31,4,31,99,0,0,0', data)
 
-	# 1st part
-	filename = ARGV[0] || 'data/2019-07.input.txt'
-	program = File.read(filename).chomp
-	max = 0
-	(0..4).to_a.permutation.to_a.each do |data|
-		result = maxamp(program, data)
-		if result > max
-			max = result
-			puts 'Higher max %s' % result
-		end
-	end
+	part1
 end
