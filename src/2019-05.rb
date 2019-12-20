@@ -14,7 +14,7 @@ class Instruction
 		@p2 = p2 || 0
 		@p3 = p3 || 0
 		@ptr = ptr
-		puts "%p" % self
+#		puts "%p" % self
 	end
 end
 
@@ -79,7 +79,7 @@ class IntComputer
 		ptr = instruction.ptr
 		pos_v1 = ram[ptr + 1]
 		value = instruction.p1 == 0 ? ram[pos_v1] : pos_v1
-		puts "output @#{ptr + 1} #{value}"
+#		puts "output @#{ptr + 1} #{value}"
 	end
 
 	def get_ram(ptr, mode, param_id)
