@@ -3,13 +3,25 @@ require 'test/unit'
 require 'byebug'
 require 'matrix'
 
+# Use Linear algibra's Vector.magnitude for distance
+# Use Geometrey's PI for bearing.
+# * Bearing is like a normalized vector, but it is a single, sortable number.
+#
+# Units of Measure
+# Vector
+# Degrees
+# atan expressed as units of PI (radians)
+# Convert radians to 360 degrees
+
+
 # A point and its relationship from us.
 # Vectors cannot be sorted.
 # The normalized vector is like a bearing, but it requires two numbers rather than one.
 class Point
-	attr_accessor :x, :y, :distance, :bearing
+	attr_accessor :x, :y, :distance, :bearing, :vaporized
 	def initialize(x,y)
 		@x, @y = x, y
+		@vaporized = 0
 	end
 
 	def bearing=(float)
@@ -21,16 +33,34 @@ class Point
 	end
 
 	def inspect
-		"<P %s:%s b:%s d:%s>" % [ @x, @y, @bearing, @distance]
+		"<P %s:%s b:%s d:%s v:%d>" % [ @x, @y, @bearing, @distance, @vaporized ]
 	end
+
+	def <=>(b)
+		self.distance <=> b.distance
+	end
+
+	# Absolute positions
+	def self.from_offset(x_root, y_root, x, y)
+		p = Point.new(x,y)
+		x_delta = x - x_root
+		y_delta = y - y_root
+		#v = Vector[x_delta, y_delta]
+		#p.distance = v.magnitude
+		# Use -y to match clockwise rotation
+		p.distance = Math.sqrt(x_delta**2 + y_delta**2)
+		#atan2 = Math.atan2(-v[1], v[0])
+		#p.bearing = atan2_to_laser(atan2)
+		p.bearing = laser_bearing(x_delta, y_delta)
+		p
+	end
+
 end
 
 # Vector[1,0].independent?(Vector[0,1])
 # norm
 # magnitude
 # normalize
-# ary = ([nil] * 10).each.inject([]){|item| item << [nil] * 10 }
-# 10.times {|x| 10.times{|y| ary[x][y] = Vector[x,y] }}
 #
 # Start with grid of points
 # Create a new grid of vectors. Each vector is from x,y to each point
@@ -42,14 +72,8 @@ end
 def asteroid_relative(x,y,grid)
 	points = Hash.new
 	x_root, y_root = x, y
-	grid.each do |key, value|
-		next unless key.is_a?(Array)
-		x, y = key
-		p = Point.new(x,y)
-		v = Vector[x - x_root, y - y_root]
-		p.distance = v.magnitude
-		p.bearing = Math.atan2(-v[1], v[0])
-		points[[x,y]] = p
+	grid.each do |(x, y), value|		
+		points[[x,y]] = Point.from_offset(x_root, y_root, x, y)
 	end
 	points
 end
@@ -81,7 +105,7 @@ end
 # returns [x, y, targets ]
 def find_best_location(asteroids)
 	results = Hash.new
-	best = []
+	best = nil
 	max = 0
 	asteroids.each do |(x,y), item|
 		ar = asteroid_relative(x,y,asteroids)
@@ -89,15 +113,10 @@ def find_best_location(asteroids)
 		size = result.size
 		if size > max
 			max = size
-			best = [ x, y, results]
+			best = [ x, y, result]
 		end
 	end
 	best
-end
-
-
-def count_targets(targets)
-
 end
 
 def load_asteroids(filename)
@@ -114,6 +133,65 @@ def load_asteroids(filename)
 	h
 end
 
+#def atan2_to_laser(f,max=360.0)
+# Bearing from 
+def laser_bearing(x,y)
+	max = 360.0
+	f = Math.atan2(y,x)
+	# Convert to -+ degress
+	f = (f > 0 ? f : (2*Math::PI + f)) * max / (2*Math::PI)
+	f += max
+	f += (max * 0.25)
+	f < max ? f : f % max
+	#f -= 90
+	#f < max ? f : f % max
+
+end
+
+# HOA
+# keys: bearing
+# values: ary of +Points+
+def vaporize_targets(hoa)
+	byebug
+	count = rotation_count = 0
+	list = hoa.sort
+	loop do
+		prev_count = count
+		list.each do |bearing, points|
+			sweep_count += 1
+			puts 'vaporize_targets rotation_count %d %d'  % [rotation_count, bearing]
+			points.each do |point|
+				if point.distance < 0.5
+					# puts 'Too close'
+					next
+				end
+
+				if point.vaporized > 0
+					# puts 'already vaporized'
+					next
+				end
+				count += 1
+				point.vaporized = count
+				puts 'vaporized %4d %p' % [ count, point]
+				break
+			end
+		end
+		break if prev_count == count
+		prev_count = count
+	end
+	count
+end
+
+def hoa_to_hash(hoa)
+	hash = {}
+	hoa.each do |bearing, points|
+		points.each do |point|
+			hash[[point.x, point.y]] = point
+		end
+	end
+	hash
+end
+
 def day10_part1_test
 	assert_equal 33, scan(load_asteroids('data/2019-10.ex1.txt'))
 	assert_equal 35, scan(load_asteroids('data/2019-10.ex2.txt'))
@@ -125,14 +203,56 @@ def day10_part1
 	seen = scan(load_asteroids('data/2019-10.input.txt'))
 	puts 'Day 10 Part 1: Answer: %s' % seen
 	assert_equal 329, seen, 'Known answer'
+
+	seen = scan(load_asteroids('data2/2019-10.input.txt'))
+	puts 'Day 10 Part 1: Answer: %s' % seen
+	assert_equal 214, seen, 'Known answer'
 end
 
 def day10_part2_test
-	puts 'Not yet done'
+	asteroids = load_asteroids('data/2019-10.ex4.txt')
+	x, y, targets = find_best_location(asteroids)
+	puts 'Station placed at %dx%d' % [x, y]
+	points = hoa_to_hash(targets)
+
+	assert_equal 11, x
+	assert_equal 13, y
+	assert_equal 210, targets.size
+
+	assert_equal 0.0, points[[ 11,12 ]].bearing
+	assert_equal 90.0, points[[ 12,13 ]].bearing
+	assert_equal 180.0, points[[ 11,14 ]].bearing
+	assert_equal 270.0, points[[ 10,13 ]].bearing
+byebug
+	vaporize_targets(targets)
+
+	assert_equal 1, points[[11, 12]].vaporized
+	assert_equal 2, points[[12, 1]].vaporized
+	assert_equal 200, points[[8,2]].vaporized
+	assert_equal 299, points[[11,12]].vaporized
+
 end
 
 def day10_part2
-	puts 'Not yet done'
+	asteroids = load_asteroids('data2/2019-10.txt')
+	x, y, targets = find_best_location(asteroids)
+	puts 'Station placed at %dx%d' % [x, y]
+
+	total = 0
+	loop do
+		new_total = vaporize_targets(targets, total)
+		puts 'Running total vaporized %d' % new_total
+		break if new_total == total
+		total = new_total
+	end
+	points = hoa_to_hash(targets)
+	answer = nil
+	points.each do |(x,y), point|
+		if point.vaporized == 200
+			answer = x * 100 + y
+		end
+	end
+	puts 'Day 10 Part 2: Answer: %s' % answer
 end
 
 if __FILE__ == $0
