@@ -49,8 +49,6 @@ class Point
 		#p.distance = v.magnitude
 		# Use -y to match clockwise rotation
 		p.distance = Math.sqrt(x_delta**2 + y_delta**2)
-		#atan2 = Math.atan2(-v[1], v[0])
-		#p.bearing = atan2_to_laser(atan2)
 		p.bearing = laser_bearing(x_delta, y_delta)
 		p
 	end
@@ -116,7 +114,19 @@ def find_best_location(asteroids)
 			best = [ x, y, result]
 		end
 	end
+	remove_self(*best)
 	best
+end
+
+def	remove_self(x,y,targets)
+	targets.each do |bearing, points|
+		points.each_with_index do |point, idx|
+			if point.x == x and point.y == y
+				points.delete_at(idx)
+				return
+			end
+		end
+	end
 end
 
 def load_asteroids(filename)
@@ -133,7 +143,6 @@ def load_asteroids(filename)
 	h
 end
 
-#def atan2_to_laser(f,max=360.0)
 # Bearing from 
 def laser_bearing(x,y)
 	max = 360.0
@@ -143,23 +152,31 @@ def laser_bearing(x,y)
 	f += max
 	f += (max * 0.25)
 	f < max ? f : f % max
-	#f -= 90
-	#f < max ? f : f % max
-
 end
 
 # HOA
 # keys: bearing
 # values: ary of +Points+
 def vaporize_targets(hoa)
-	byebug
+	results = {}
 	count = rotation_count = 0
-	list = hoa.sort
 	loop do
+		list = hoa.sort_by{|k,v| [k, v.sort!]}
 		prev_count = count
+		rotation_count += 1
 		list.each do |bearing, points|
-			sweep_count += 1
-			puts 'vaporize_targets rotation_count %d %d'  % [rotation_count, bearing]
+			#puts 'vaporize_targets rotation_count: %d bearing: %d'  % [rotation_count, bearing]
+			if point = points.shift
+				count += 1
+				point.vaporized = count
+				#puts 'vaporized %4d %p' % [ count, point]
+				results[[point.x, point.y]] = point
+			end
+			if points.size == 0
+				hoa.delete(bearing)
+			end
+			next
+			# In place hash more loops
 			points.each do |point|
 				if point.distance < 0.5
 					# puts 'Too close'
@@ -172,14 +189,14 @@ def vaporize_targets(hoa)
 				end
 				count += 1
 				point.vaporized = count
-				puts 'vaporized %4d %p' % [ count, point]
+				#puts 'vaporized %4d %p' % [ count, point]
 				break
 			end
 		end
 		break if prev_count == count
 		prev_count = count
 	end
-	count
+	results
 end
 
 def hoa_to_hash(hoa)
@@ -223,36 +240,26 @@ def day10_part2_test
 	assert_equal 90.0, points[[ 12,13 ]].bearing
 	assert_equal 180.0, points[[ 11,14 ]].bearing
 	assert_equal 270.0, points[[ 10,13 ]].bearing
-byebug
-	vaporize_targets(targets)
 
-	assert_equal 1, points[[11, 12]].vaporized
-	assert_equal 2, points[[12, 1]].vaporized
-	assert_equal 200, points[[8,2]].vaporized
-	assert_equal 299, points[[11,12]].vaporized
+	results = vaporize_targets(targets)
+
+	assert_equal 1, results[[11, 12]].vaporized
+	assert_equal 2, results[[12, 1]].vaporized
+	assert_equal 200, results[[8,2]].vaporized
+	assert_equal 299, results[[11,1]].vaporized
 
 end
 
 def day10_part2
-	asteroids = load_asteroids('data2/2019-10.txt')
+	asteroids = load_asteroids('data2/2019-10.input.txt')
 	x, y, targets = find_best_location(asteroids)
 	puts 'Station placed at %dx%d' % [x, y]
+	results = vaporize_targets(targets)
+	if point = results.find{|k,v| v.vaporized == 200}[1]
+		answer = point.x * 100 + point.y
+	end
 
-	total = 0
-	loop do
-		new_total = vaporize_targets(targets, total)
-		puts 'Running total vaporized %d' % new_total
-		break if new_total == total
-		total = new_total
-	end
-	points = hoa_to_hash(targets)
-	answer = nil
-	points.each do |(x,y), point|
-		if point.vaporized == 200
-			answer = x * 100 + y
-		end
-	end
-	puts 'Day 10 Part 2: Answer: %s' % answer
+	puts 'Day 10 Part 2: Answer: %d @ %p' % [answer, point]
 end
 
 if __FILE__ == $0
