@@ -37,7 +37,7 @@ def fuel_for_filename(filename)
 end
 
 def day01
-	mass, fuel, f4f = fuel_for_filename('./data/2019-01')
+	mass, fuel, f4f = fuel_for_filename('./data2/2019-01.input.txt')
 	total_fuel = fuel + f4f
 	puts "mass=%d, fuel: %d, f4f: %d, total: %d" % [ mass, fuel, f4f, total_fuel ]
 end
