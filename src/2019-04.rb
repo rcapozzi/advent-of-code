@@ -53,7 +53,7 @@ def try0()
 end
 
 def try1()
-	input = '130254-678275'
+	input = File.read(ARGV[0]).chomp rescue '130254-678275'
 	if input =~ /(\d+)-(\d+)/
 		i_start, i_end = $1.to_i, $2.to_i
 	end
@@ -61,7 +61,8 @@ def try1()
 	seen = Hash.new
 	v1 = v2 = skips = 0
 	i_start.upto(i_end) do |i|
-		key = i.digits.sort.join
+		key = i.to_s.chars.map(&:to_i).sort.join
+		#key = i.digits.sort.join
 		i_key = key.to_i
 		if i_key < i_start || i_key > i_end || seen[key]
 			skips += 1
