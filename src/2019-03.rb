@@ -113,12 +113,10 @@ class Path
 end
 
 if __FILE__ == $0
-	#filename = ARGV[0]
-	#xpaths = []
-	#File.readlines(filename).each{|line|xpaths << Path.new(line.chomp)}
+	filename = ARGV[0]
 	paths = []
 	grid = Grid.new
-	DATA.each_line do |line|
+	File.readlines(filename).each do |line|
 		path = Path.new(line.chomp)
 		paths << path
 		puts 'Add path to grid...'
