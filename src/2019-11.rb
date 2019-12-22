@@ -142,6 +142,7 @@ end
 
 class Panel
 	attr_accessor :color, :visited
+	attr_reader :x, :y
 	def initialize(x,y)
 		@x, @y = x, y
 		@color = @visited = 0
@@ -172,11 +173,12 @@ class Robot
 		@ic = IntComputer.new(str)
 	end
 
-	def initialize(program=nil)
+	def initialize(program=nil,white_power=false)
 		@panels = Hash.new{|h, k| h[k] = Panel.new(*k)}
 		@facing = :N
 		@x = @y = 0
 		self.program = program if program
+		paint_panel(1) if white_power
 	end
 
 	# 0: left 90 degrees. 1 right 90 degrees
@@ -215,6 +217,28 @@ class Robot
 		end
 		self
 	end
+
+	def print
+		values = panels.values
+		ary = values.collect{|p| p.x}.sort
+		x_min, x_max = ary.first, ary.last
+		y_min = values.min_by{|p| p.y}.y
+		y_max = values.max_by{|p| p.y}.y
+		min_max = [[ x_min, y_min], [x_max, y_max]]
+		puts 'XXX %p' % [ min_max ]
+		#return min_max
+		doc = []
+		y_max.downto(y_min) do |y|
+			row = []
+			x_min.upto(x_max) do |x|
+				panel = @panels[[x,y]]
+				c = panel.color == 0 ? ' ' : '0'
+				row << c
+			end
+			doc << row.join
+		end
+		doc.join("\n")
+	end
 end
 
 def day11_part1_test
@@ -236,12 +260,17 @@ def day11_part1
 	puts 'Day 11 Part 1: %s' % answer
 end
 
+def day11_part2
+	input = ARGV[0] || File.read('data2/2019-11.input.txt').chomp
+	puts 'Day 11 Part 2:'
+	puts Robot.new(input,true).run.print
+end
+
 if __FILE__ == $0
 	extend Test::Unit::Assertions
 	day11_part1_test
 	day11_part1
-	#day11_part2_test
-	#day11_part2
+	day11_part2
 end
 
 
