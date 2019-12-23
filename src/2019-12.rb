@@ -1,9 +1,6 @@
 require 'test/unit'
 require 'byebug'
-
-
-# Matrix of positions
-# Matrix of velocities
+require 'set'
 
 # Definitions
 # total energy for a single moon is its potential energy multiplied by its kinetic energy
@@ -12,17 +9,10 @@ require 'byebug'
 module AOC
     class System
         attr_reader :objects
-        def initialize
+        def initialize(filename)
             @tick_count = 0
             @objects = []
-            #@pos = []
-            #@vel = []
-        end
-
-        def add_object(x, y, z)
-            @objects << [x, y, z, 0, 0, 0]
-            #@pos << [x, y, z]
-            #@vel << [0, 0, 0]
+            load_input(filename)
         end
 
         def tick
@@ -39,8 +29,9 @@ module AOC
                         elsif a1 > a2
                             o1[axis + 3] -= 1
                         else
-                            #puts 'NOOP equal i:%d a:%d %p' % [idx, axis, o1]
+                        #   puts 'NOOP equal i:%d a:%d %p' % [idx, axis, o1]
                         end
+                        #puts 'equal i:%d a:%d %p' % [idx, axis, o1]
                     end
                 end
             end
@@ -51,14 +42,9 @@ module AOC
                     o1[axis] += vel
                 end
             end
-            save_state
             @tick_count += 1
             self
         end
-        def save_state
-            @seen[@objects[0,3]] = @count
-        end
-
         def energy
             total = 0
             @objects.each_with_index do |o1, idx|
@@ -72,60 +58,137 @@ module AOC
             total
         end
 
-    end
-end
+        # Velocity deltas to apply to 1st moon
+        # m2 = Matrix[ [0, 0, 0], [1, -1, -1], [1, -1, 1], [1, 1, -1]]
+        #
+        # m1 = Matrix[[-1,0,2]]
+        # m2 = Matrix[[3,-1,-1]]
+        # m1 + m2  # => Matrix[[2, -1, 1]]
+        def tick_by_matrix
+            # apply gravity by updating velocity
+            @objects.each_with_index do |o1, i1|
+                m1 = Matrix.zero(1,3)
+                d1 = [0, 0, 0]
+                @objects.each_with_index do |o2, i2|
+                    d2 = [0, 0, 0]
+                    [0, 1, 2].each do |axis|
+                        a1 = o1[axis]
+                        a2 = o2[axis]
+                        value = if a1 < a2
+                            1
+                        elsif a1 > a2
+                            -1
+                        else
+                            0
+                        end
+                        d2[axis] = value
+                        d1[axis] += value
+                    end
+                    m2 = Matrix[d2]
+                    m1 = m1 + m2
+                    puts '%d %d o1: %p o2: %p d1: %p d2: %p' % [i1, i2, o1[0,3], o2[0,3], d1, d2]
+                end
+                d1.each_with_index do |d,i|
+                    o1[i] += 1
+                end
+            end
+            @tick_count += 1
+            self
+        end
 
-class Moon
-    attr_accessor :x, :y, :z, :vx, :vy, :vz
-    def initialize(x,y,z)
-        @x, @y, @z = x, y, z
-        @vx = @vy = @vz = 0
-    end
-end
+        def axis_state(i)
+            @objects.map{|o| [o[i], o[i + 3]]}.flatten
+        end
 
-def load_input(filename)
-    data = []
-    File.readlines(filename).each do |line|
-        data << line.scan(/-*\d+/).map(&:to_i)
+        def each_axis(&block)
+            (0..2).each do |axis|
+                yield axis
+            end
+        end
+
+        def find_repeat
+            seen = Hash.new
+            each_axis do |axis|
+                seen[axis] = Set.new
+                seen[axis].add(axis_state(axis))
+            end
+
+            lcm = {}
+            loop do
+                tick
+                each_axis do |axis|
+                    state = axis_state(axis)
+                    if seen[axis].include?(state)
+                        lcm[axis] ||= @tick_count
+                    else
+                        seen[axis].add(state)
+                    end
+                end
+                break if lcm.size == 3
+            end
+            puts '%p' % [lcm]
+            lcm.map(&:last).reduce(&:lcm)
+        end
+
+        def load_input(filename)
+            File.readlines(filename).each do |line|
+                x,y,z = line.scan(/-*\d+/).map(&:to_i)
+                @objects << [x, y, z, 0, 0, 0]
+            end
+            # [0,1,2].each do |axis|
+            #     @seen[axis].add(axis_state(axis))
+            # end
+        end
+
     end
-    data
+
+    class Loader
+        # Return sparse array
+        def self.load_example(filename)
+            hash = Hash.new
+            key = nil
+            File.readlines(filename).each do |line|
+                if line =~ /After (\d+) steps/
+                    key = $1.to_i
+                    hash[key] = []
+                elsif line =~ /^pos/
+                    hash[key] << line.scan(/-*\d+/).map(&:to_i)
+                end
+            end
+            hash
+        end
+    end
 end
 
 def day12_part1_test
-    data = load_input(filename='data/2019-12.ex1.txt')
-    assert_equal 4, data.size
-    sys = AOC::System.new()
-    data.each do |line|
-        sys.add_object(*line)
-    end
-    puts 'System: %p' % sys
+    sys = AOC::System.new('data/2019-12.ex1.txt')
+    assert_equal 4, sys.objects.size
     sys.tick
-    puts 'System: %d: %p' % [sys.energy, sys]
     assert_equal [2,-1, 1, 3,-1,-1], sys.objects[0]
     assert_equal [3,-7,-4, 1, 3, 3], sys.objects[1]
 end
+
 def day12_part1
-    data = load_input(filename='data2/2019-12.input.txt')
-    sys = AOC::System.new()
-    data.each do |line|
-        sys.add_object(*line)
-    end
+    sys = AOC::System.new('data2/2019-12.input.txt')
     1000.times do
         sys.tick
     end
     answer = sys.energy
     assert_equal 7687, answer, 'Known answer'
     puts 'Day 12 Part 1 answer %p' % answer
-
 end
+
+def day12_part2
+    sys = AOC::System.new('data2/2019-12.input.txt')
+    answer = sys.find_repeat
+    assert_equal 334945516288044, answer, 'Known answer'
+    puts 'Day 12 Part 2 answer %p' % answer
+end
+
 if __FILE__ == $0
     extend Test::Unit::Assertions
     day12_part1_test
     day12_part1
+    day12_part2
 end
 
-__END__
-<x=16, y=-8, z=13>
-<x=4, y=10, z=10>
-<x=17, y=-5, z=6>
-<x=13, y=-3, z=0>
