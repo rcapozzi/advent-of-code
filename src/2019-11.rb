@@ -219,18 +219,12 @@ class Robot
 	end
 
 	def print
-		values = panels.values
-		ary = values.collect{|p| p.x}.sort
-		x_min, x_max = ary.first, ary.last
-		y_min = values.min_by{|p| p.y}.y
-		y_max = values.max_by{|p| p.y}.y
-		min_max = [[ x_min, y_min], [x_max, y_max]]
-		puts 'XXX %p' % [ min_max ]
-		#return min_max
+		x_range = Range.new *panels.keys.map(&:first).minmax
+		y_range = Range.new *panels.keys.map(&:last).minmax
 		doc = []
-		y_max.downto(y_min) do |y|
+		y_range.reverse_each do |y|
 			row = []
-			x_min.upto(x_max) do |x|
+			x_range.each do |x|
 				panel = @panels[[x,y]]
 				c = panel.color == 0 ? ' ' : '0'
 				row << c
