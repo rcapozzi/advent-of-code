@@ -79,6 +79,7 @@ class IntComputer
 			@op_ptr = 0
 		end
 		@input << input if input
+		@input.flatten!
 		@output_result = []
 
 		loop do
@@ -243,7 +244,7 @@ def day11_part1_test
 	assert_equal 0, robot.camera
 	assert_equal [1,0], robot.turn(1).pos
 
-	puts 'OK: day11_part1_test' 
+	puts 'OK: day11_part1_test'
 end
 
 def day11_part1
