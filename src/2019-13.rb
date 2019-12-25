@@ -5,6 +5,24 @@ load './src/2019-11.rb'
 # col = x
 # row = y
 # pos [0, 1] = [row, col] = [y,x]
+class FrameRow
+	def []=(x,y,value)
+		@f[y][x] = value
+	end
+
+	def initialize(x_size,y_size)
+        @f = [ ]
+        y_size.times{|i| @f << ' ' * x_size}
+	end
+
+    def draw
+        puts "\e[H\e[2J"
+        @f.each do |row|
+            puts row
+        end
+	end
+end
+
 class Frame
 	def frame
 		@f
@@ -45,9 +63,10 @@ class Board
 			@ic.ram[0] = 2
 		end
 		cheat() if true == opts[:cheat]
-		@draw = false
+		@draw = true
 		@tick = 0
 		@frame = Frame.new(40, 26)
+		@frame = FrameRow.new(40, 26)
 		@tiles = Hash.new{|h,k| h[k] = Tile.new(k[0],k[1],nil)}
 	end
 
